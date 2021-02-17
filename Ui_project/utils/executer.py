@@ -123,7 +123,7 @@ class Executer:
                     executionResult = self._executeLab(inputs, outputFolder,
                         progressBar=progressBar, plotter=None)
                 elif labCode == "Lab1":
-                    executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Predicted Sale Price",
+                    executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
                         progressBar=progressBar, plotter=None)
                 elif labCode == "Lab2":
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "TBD",
@@ -232,14 +232,14 @@ class Executer:
         newChecksum.process(sendBuffer[1:])
         checksumBytes = newChecksum.finalbytes()
         sendBuffer.extend(checksumBytes)
-        print(len(sendBuffer))
+        # print(len(sendBuffer))
         for _ in range(SERIAL_COMMAND_MAX_TRIALS):
             t = time.time()
             self.serialPort.write(sendBuffer)
             self.serialTimeoutTimer.setInterval(timeout)
             self.serialTimeoutTimer.start()
             succeeded, string = self.getSerialAck()
-            print("The time spent from sending a command to receiving a reply (or timeouting) is ",time.time()-t)
+            # print("The time spent from sending a command to receiving a reply (or timeouting) is ",time.time()-t)
             if succeeded:
                 return string
             elif not succeeded and "EXCEPTION" in string:

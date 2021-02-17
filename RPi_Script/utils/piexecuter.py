@@ -3,8 +3,7 @@ import enum
 from crccheck.crc import Crc16
 import os
 import pickle
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.neighbors import KNeighborsRegressor
+import sklearn
 import numpy as np
 import zlib
 from subprocess import check_output, CalledProcessError
@@ -184,9 +183,9 @@ class PiExecuter():
         return outputPayload
 
     def processLab1(self, payload):
-        print("Went into process lab 1")
+        # print("Went into process lab 1")
         input_list = [float(i) for i in payload.split(',')]
-        y_pred = self._loadedModel.predict(np.array(input_list).reshape(1, -1)).astype('int64')
+        y_pred = self._loadedModel.predict(np.array(input_list).reshape(1, -1)).astype('float32')
         outputPayload = ', '.join([str(i) for i in list(y_pred.flatten())])
         print("The Acknowledgment Payload is:"+outputPayload)
         if outputPayload == "":
@@ -207,7 +206,7 @@ please check the provided model and restart both the application and Raspberry P
         checksumBytes = newChecksum.finalbytes()
         outBuffer.extend(checksumBytes)
         self.port.write(outBuffer)
-        print("sent Ack: {}".format(outBuffer))
+        # print("sent Ack: {}".format(outBuffer))
 
 
     @property
@@ -225,5 +224,5 @@ please check the provided model and restart both the application and Raspberry P
 
     @serialState.setter
     def serialState(self, newVal):
-        print("Switched to Serial State: {}".format(newVal))
+        # print("Switched to Serial State: {}".format(newVal))
         self._serialState = newVal
