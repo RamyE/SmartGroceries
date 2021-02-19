@@ -157,8 +157,9 @@ Now all you need to do is run the GUI. You can follow these steps:
 # 3. How to use the GUI
 The GUI helps you use test your trained model on the end use platform, which is the Raspberry Pi. Before you use the GUI, you will need to have the following ready:
 
+1. Make sure to read the project notes first (Especially the one about training 32-bit models): [Project Notes](https://github.com/RamyE/SFU_ML#notes)
 1. A Raspberry Pi Zero W connected to your computer.
-2. A trained model generated from the lab tutorials and transferred to the Raspberry Pi using WinSCP.
-3. Test Dataset without the labels in a CSV file, which could be generated as part of the lab tutorials.
-4. Run the Raspberry Pi Script on the Raspberry Pi by SSH'ing to the Raspberry Pi and starting the script (this step is only needed if you did not setup the script to run automatically on startup).
-5. Choose the right options in the GUI, connect to the Raspberry Pi Serial Port and then press **Start Processing**. For help with the options, you can use the **"?"** button on the top right corner of the GUI Window.
+1. A trained model generated from the lab tutorials and transferred to the Raspberry Pi using WinSCP (Make sure the transferred model goes to ~/SFU_ML/RPi_Script/saved_models or otherwise the script will not be able to find it)
+1. Test Dataset without the labels in a CSV file, which could be generated as part of the lab tutorials.
+1. Run the Raspberry Pi Script on the Raspberry Pi by SSH'ing to the Raspberry Pi and starting the script (this step is only needed if you did not setup the script to run automatically on startup).
+1. Choose the right options in the GUI, connect to the Raspberry Pi Serial Port and then press **Start Processing**. For help with the options, you can use the **"?"** button on the top right corner of the GUI Window.
