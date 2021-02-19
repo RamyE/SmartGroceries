@@ -144,8 +144,8 @@ class PiExecuter():
                     try:
                         self._loadedModel = pickle.load(open(self._currentModelPath, 'rb'))
                         print("Loaded the Model File successfully")
-                    except:
-                        raise Exception("Problem opening the current model with path {} ".format(str(self._currentModelPath)))
+                    except Exception as e:
+                        raise Exception("Problem opening the current model with path {} because of exception: {}".format(str(self._currentModelPath), str(e)))
 
             self.execState = ExecState.ModelLoaded
             self.execState = ExecState.Processing
