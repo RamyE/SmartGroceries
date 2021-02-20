@@ -22,6 +22,8 @@ if __name__ == "__main__":
         portName = "COM2"
 
     serialPort = serial.Serial(portName, 115200 , timeout=1, write_timeout=1, bytesize=8, parity='N', stopbits=1)
+    serialPort.flushInput()
+    serialPort.flushOutput()
     # serialPort.set_buffer_size(rx_size = 10**8, tx_size = 10**3)
 
     while(1):

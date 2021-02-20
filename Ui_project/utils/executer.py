@@ -1,6 +1,7 @@
 import pandas as pd 
 import enum
 import serial
+from serial.serialutil import SerialTimeoutException
 from utils.utils import lab_names, lab_default_models
 from utils.plotter import Plotter
 from crccheck.crc import Crc16
@@ -77,7 +78,8 @@ class Executer:
         self.serialPort.flushOutput()
         startTime = time.time()
 
-        self.reset() #FIXME: This is a workaround until we find out why sometimes it fails the first run
+        # if self.reset() == ExecutionResult.FAILED: #This is a workaround to make processing fail if RPi is not yet ready
+        #     return ExecutionResult.FAILED
 
         # progressBar = None
         if progressBar is not None:
@@ -92,7 +94,7 @@ class Executer:
                     return ExecutionResult.FAILED
 
             if self.execState == ExecState.Connected:
-                if self._sendCommand("SELECT_LAB", labCode) == FAILURE_CODE:
+                if self._sendCommand("SELECT_LAB", labCode, max_retry=SERIAL_COMMAND_MAX_TRIALS*4) == FAILURE_CODE:
                         self.log("Error occured with lab selection", type="ERROR")
                         return ExecutionResult.FAILED
                 else:
@@ -106,7 +108,7 @@ class Executer:
                         return ExecutionResult.FAILED
                 else:
                     modelName = lab_default_models[labCode] if not model.startswith("RPI:") else model[4:]
-                    if self._sendCommand("LOAD_MODEL", modelName) == FAILURE_CODE:
+                    if self._sendCommand("LOAD_MODEL", modelName, timeout=SERIAL_COMMAND_TIMEOUT*3) == FAILURE_CODE:
                         self.log("Failed to load the required model", type="ERROR")
                         return ExecutionResult.FAILED
 
@@ -170,13 +172,24 @@ class Executer:
             return result
 
     def reset(self):
-        startBytes = bytes([STARTING_BYTE]*50)
-        self.serialPort.write(startBytes)
-        result = self._sendCommand("RESET", "None")
-        if result is FAILURE_CODE:
+        try:
+            startBytes = bytes([STARTING_BYTE]*50)
+            self.serialPort.write(startBytes)
+            result = self._sendCommand("RESET", "None")
+            if result is FAILURE_CODE:
+                return ExecutionResult.FAILED
+            else:
+                return ExecutionResult.COMPLETED
+        except SerialTimeoutException as e:
+            self.logger.enableLogging()
+            self.log("Please try again or reboot the RPi if the problem persists, Caught exception: {}".format(e), type="ERROR")
             return ExecutionResult.FAILED
-        else:
-            return ExecutionResult.COMPLETED
+        except Exception as e:
+            self.logger.enableLogging()
+            self.log("Caught exception: {}".format(e), type="ERROR")
+            self.log(traceback.format_exc())
+            print(traceback.format_stack())
+            return ExecutionResult.FAILED
 
     def _executeLab(self, inputs, outputFolder, completeInputs= None, outputHeader= None, progressBar= None, plotter= None):
         if progressBar is not None:
@@ -224,7 +237,7 @@ class Executer:
             self.log(f"Outputs Saved in {outputFilePath+'_OutputsOnly.csv'}\nComplete data saved in {outputFilePath+'_Full.csv'}")
             return SUCCESS_CODE
 
-    def _sendCommand(self, command, payload, timeout=SERIAL_COMMAND_TIMEOUT):
+    def _sendCommand(self, command, payload, timeout=SERIAL_COMMAND_TIMEOUT, max_retry=SERIAL_COMMAND_MAX_TRIALS):
         if not command in SERIAL_COMMANDS:
             print("The command provided {} is not a valid serial command".format(command))
             return FAILURE_CODE
@@ -239,9 +252,17 @@ class Executer:
         checksumBytes = newChecksum.finalbytes()
         sendBuffer.extend(checksumBytes)
         # print(len(sendBuffer))
-        for _ in range(SERIAL_COMMAND_MAX_TRIALS):
-            t = time.time()
-            self.serialPort.write(sendBuffer)
+        for attempt in range(max_retry):
+            if attempt != 0:
+                self.log(f"Attempt #{attempt+1} to send the command {command} with payload {payload}", type="DEBUG")
+                QCoreApplication.processEvents()
+            # t = time.time()
+            try:
+                self.serialPort.flushInput()
+                self.serialPort.write(sendBuffer)
+            except SerialTimeoutException:
+                self.serialPort.flushOutput()
+                continue
             self.serialTimeoutTimer.setInterval(timeout)
             self.serialTimeoutTimer.start()
             succeeded, string = self.getSerialAck()

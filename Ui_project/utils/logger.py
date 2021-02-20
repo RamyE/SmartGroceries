@@ -35,13 +35,14 @@ class Logger:
         if type is None:
             type = "INFO"
         string = string + type + ": "
-        color = typeColors[type]
+        if type in typeColors.keys():
+            color = typeColors[type]
         string = string + logLine
         self.logBox.append(string)
         self.labelBox.setStyleSheet("color: "+color)
         self.labelBox.setAlignment(Qt.AlignHCenter)
-        self.labelBox.setText(logLine)
-
+        if type in typeColors.keys():
+            self.labelBox.setText(logLine)
 
     def saveLog(self, filePath):
         try:
