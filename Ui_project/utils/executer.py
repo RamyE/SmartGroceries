@@ -77,6 +77,8 @@ class Executer:
         self.serialPort.flushOutput()
         startTime = time.time()
 
+        self.reset() #FIXME: This is a workaround until we find out why sometimes it fails the first run
+
         # progressBar = None
         if progressBar is not None:
             progressBar.setValue(0)
