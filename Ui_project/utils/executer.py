@@ -126,10 +126,10 @@ class Executer:
                         progressBar=progressBar, plotter=None)
                 elif labCode == "Lab1":
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
-                        progressBar=progressBar, plotter=None)
+                        progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
                 elif labCode == "Lab2":
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "TBD",
-                        progressBar=progressBar, plotter=None)
+                        progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
                 else:
                     raise ValueError("Lab Code should be one of the implemented lab codes for processing to work")
                     return ExecutionResult.FAILED
@@ -178,14 +178,18 @@ class Executer:
         else:
             return ExecutionResult.COMPLETED
 
-    def _executeLab(self, inputs, outputFolder, outputHeader= None, progressBar= None, plotter= None):
+    def _executeLab(self, inputs, outputFolder, completeInputs= None, outputHeader= None, progressBar= None, plotter= None):
         if progressBar is not None:
             progressBarIncrements = 100/len(inputs.index)
             currentProgressBarValue = progressBar.value()
-
+        
         outputFilePath = os.path.join(outputFolder, datetime.now().strftime("%d-%m_%H-%M-%S"))
 
-        outputDataFrame = copy.deepcopy(inputs)
+        if completeInputs is None:
+            outputDataFrame = copy.deepcopy(inputs)
+        else:
+            outputDataFrame = copy.deepcopy(completeInputs)
+
         with open(outputFilePath+"_OutputsOnly.csv", 'a') as outFile:
             headers = []
             if outputHeader is not None:

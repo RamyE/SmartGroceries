@@ -394,8 +394,8 @@ class MainWindow(QMainWindow):
                                     "\nReceived: " + result
             else:
                 replyMessage = "Failed to update the RPi Script"
-                if "FAIL" in result:
-                    replyMessage = replyMessage + "\nReceived: " + result
+                if "FAIL" in str(result):
+                    replyMessage = replyMessage + "\nReceived: " + str(result)
 
         self.logger.log(replyMessage)
         ipAddrMessage = QMessageBox()
