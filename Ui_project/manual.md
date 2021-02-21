@@ -182,10 +182,10 @@ To solve this problem:
 * Make sure you have the latest version of the GUI and RPi script
 
 ### I am getting results but they all look wrong!
-If your model is trained correctly and is valid, it is very likely that you are feeding it the wrong inputs or the right inputs but in the wrong order. Make sure to export the features in the right column order used to train the model and select the right features from the dialog box that appears when press Start Processing. Note that the CSV file givn to the GUI should use the first row for the headers. Please check the csv file in Excel or another software to confirm that it is as expected. If the problem persists, please submit an issue and include the CSV file.
+If your model is trained correctly and is valid, it is very likely that you are feeding it the wrong inputs or the right inputs but in the wrong order. Make sure to export the features in the right column order used to train the model and select the right features from the dialog box that appears when press Start Processing. Note that the CSV file given to the GUI should use the first row for the headers. Please check the csv file in Excel or another software to confirm that it is as expected. If the problem persists, please submit an issue and include the CSV file.
 
 ### I am not sure what to put in **Choose Model Name** or I get an error that the model is not found
-Make sure you have the model transferred to the Raspberry Pi using WinSCP and that the model is saved on the Raspberry Pi in the folder saved_models with the full path `/home/pi/SFU_ML/RPi_Script/saved_models`. Make sure that the exact name of the model including the extension is added in the textbox of **Choose Model Name** (e.g. `MyLinearRegressionModel.pkl`
+Make sure you have the model transferred to the Raspberry Pi using WinSCP and that the model is saved on the Raspberry Pi in the folder saved_models with the full path `/home/pi/SFU_ML/RPi_Script/saved_models`. Make sure that the exact name of the model including the extension is added in the textbox of **Choose Model Name** (e.g. `MyLinearRegressionModel.pkl`)
 
 ### I cannot ssh into the Raspberry Pi
 If you are trying to use `ssh pi@raspberrypi` but get the error:
