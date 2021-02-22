@@ -135,7 +135,7 @@ su pi -c 'python3 /home/pi/SFU_ML/RPi_Script/main.py' &
 This section covers installing a python interpreter and package installations in a virtual environment, rather than system-wide. We will use Anaconda here, however, if you have an alternative that you are using, you may continue to use that. To setup the virtual environment and install the required dependencies, follow these steps:
 
 1. Head over to [anaconda.com](anaconda.com) and install the latest version of Anaconda. Make sure to download the “Python 3.7 Version” for the appropriate architecture. Check this [page](https://www.geeksforgeeks.org/how-to-install-anaconda-on-windows/) for help, if needed.
-2. Open the command prompt and confirm that conda is in PATH by typing `conda -V`
+2. Open the command prompt and confirm that conda is in PATH by typing `conda -V`. If it is noth in PATH, you can instead use the Anaconda Prompt to setup your virtual environment and run the GUI
 3. Create a new virtual environment using `conda create -n ml_course python=3.7 pip` where `ml_course` is the name of the virtual environment and could be activated later using `conda activate ml_course`
 4. The required dependencies will be installed in the next section as they require the repo to be cloned first
 5. Make sure not to install any other applications, especially GUI applications that use Qt, in the same virtual environment (e.g. Spyder) as they may cause conflicts. If you want to use other applications, you can install them in your **base** environment which could be activated using `conda activate base`
