@@ -437,7 +437,7 @@ class MainWindow(QMainWindow):
             self.port.close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser = argparse.ArgumentParser(description='RPi HIL Communication GUI')
     parser.add_argument('--ignore-platform', default=False, action='store_true')
     parser.add_argument('--allow-resizing', default=False, action='store_true')
     parser.add_argument('--larger-font', default=False, action='store_true')
