@@ -191,3 +191,12 @@ Make sure you have the model transferred to the Raspberry Pi using WinSCP and th
 If you are trying to use `ssh pi@raspberrypi` but get the error:
 * "No such host is known" :: This means that the hostname is not recognized on the network and so it is very likely that there was a problem getting your raspberry pi to the network. Please make sure to follow section 1.1.2 carefully
 * Other errors may be caused by having another raspberry pi on the network with the same hostname that you are accidentally trying to connect to. In this case, please use the IP Address instead using `ssh pi@IP_ADDRESS'. You can also power off all other Raspberry Pis on the network and try again.
+
+### The GUI window looks very small on my computer
+With the latest version, you can now pass the command line argument `--allow-resizing` to allow resizing your main window. To use that argument, all you need to do is run the GUI using `python .\Ui_project\main.py --allow-resizing` rather than just `python .\Ui_project\main.py'
+
+### The text in the GUI looks small on my computer
+With the latest version, you can now pass the command line argument `--larger-font` to run your GUI with a larger font size and weight. To use that argument, all you need to do is run the GUI using `python .\Ui_project\main.py --larger-font` rather than just `python .\Ui_project\main.py'
+
+### I have a Linux or Mac but the GUI says it supports Windows only
+The GUI is currently tested on Windows only, and although most, if not all, of its code should be portable and work on most platforms. It was never tested and so we are not sure if there will be errors. As of the latest version, you can skip the platform check and run the GUI on any platform at your own risk by using the command line argument `--ignore-platform`. To use that argument, all you need to do is run the GUI using `python .\Ui_project\main.py --ignore-platform` rather than just `python .\Ui_project\main.py'
