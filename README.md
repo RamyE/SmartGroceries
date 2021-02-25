@@ -8,6 +8,7 @@
 ## Raspberry Pi Communication GUI and Raspberry Pi Script
 
 ### [Technical Manual](Ui_project/manual.md)
+### [Troubleshooting Tips](Ui_project/manual.md#troubleshooting)
 ### [GUI Code](Ui_project)
 ### [Raspberry Pi Script](RPi_Script)
 

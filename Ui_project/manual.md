@@ -135,7 +135,7 @@ su pi -c 'python3 /home/pi/SFU_ML/RPi_Script/main.py' &
 This section covers installing a python interpreter and package installations in a virtual environment, rather than system-wide. We will use Anaconda here, however, if you have an alternative that you are using, you may continue to use that. To setup the virtual environment and install the required dependencies, follow these steps:
 
 1. Head over to [anaconda.com](anaconda.com) and install the latest version of Anaconda. Make sure to download the “Python 3.7 Version” for the appropriate architecture. Check this [page](https://www.geeksforgeeks.org/how-to-install-anaconda-on-windows/) for help, if needed.
-2. Open the command prompt and confirm that conda is in PATH by typing `conda -V`
+2. Open the command prompt and confirm that conda is in PATH by typing `conda -V`. If it is noth in PATH, you can instead use the Anaconda Prompt to setup your virtual environment and run the GUI
 3. Create a new virtual environment using `conda create -n ml_course python=3.7 pip` where `ml_course` is the name of the virtual environment and could be activated later using `conda activate ml_course`
 4. The required dependencies will be installed in the next section as they require the repo to be cloned first
 5. Make sure not to install any other applications, especially GUI applications that use Qt, in the same virtual environment (e.g. Spyder) as they may cause conflicts. If you want to use other applications, you can install them in your **base** environment which could be activated using `conda activate base`
@@ -163,3 +163,31 @@ The GUI helps you use test your trained model on the end use platform, which is 
 1. Test Dataset without the labels in a CSV file, which could be generated as part of the lab tutorials.
 1. Run the Raspberry Pi Script on the Raspberry Pi by SSH'ing to the Raspberry Pi and starting the script (this step is only needed if you did not setup the script to run automatically on startup).
 1. Choose the right options in the GUI, connect to the Raspberry Pi Serial Port and then press **Start Processing**. For help with the options, you can use the **"?"** button on the top right corner of the GUI Window.
+1. If you run into any problem running the GUI and producing results, please check the troubleshooting section below. If you can't find the answer, please [Submit an Issue](https://github.com/RamyE/SFU_ML/issues/new/choose) and include as much detail as possible. 
+
+# TROUBLESHOOTING
+### I am having some issue! or I want to update the GUI
+If you run into any issue, it is possible that the issue is fixed in a newer revision of this project. Please make sure to `git pull` your local repo on your computer and ssh into the Raspberry Pi, open the folder SFU_ML using `cd ~/SFU_ML` and then `git pull`. It is a good habit to pull the latest updates regularly so you can have the latest bug fixes and added features.
+
+### The GUI is running but I keep getting errors
+The type of the error you get may show what the problem you are having exactly is:
+* If the error you get has `Caught exception: write timeout` or `Error occured with lab selection`, it is very likely that your RPi Script is not running on the Raspberry Pi. Please ensure you follow section 1.6 carefully and if that does not help, try to ssh into the RPi and run `python3 ~/SFU_ML/RPi_Script/main.py &` and you should get the process number as the output and it will be running in the background. If you got an exception or a problem starting the script, feel free report the issue.
+* If the error you get has something like `size 4 is different from 8`, this means you are trying to use a model that is trained using 4 features/inputs and you are trying to feed it 8 features. In this case, make sure to export the features in the right column order used to train the model and select the right features from the dialog box that appears when press Start Processing.
+
+### The GUI freezes when I press **Start Processing**
+This means that the serial write is failing either because the script is not running on your RPi (see section 1.6) or because you did not give the Raspberry Pi enough time to boot and load everything. The freezing is because older versions of the GUI had a long timeout.
+To solve this problem:
+* Make sure you wait for 2 minutes at least after plugging in your Raspberry Pi before you press Start Processing
+* Make sure to try multiple times before you reboot or power cycle the RPi
+* Make sure you have the latest version of the GUI and RPi script
+
+### I am getting results but they all look wrong!
+If your model is trained correctly and is valid, it is very likely that you are feeding it the wrong inputs or the right inputs but in the wrong order. Make sure to export the features in the right column order used to train the model and select the right features from the dialog box that appears when press Start Processing. Note that the CSV file given to the GUI should use the first row for the headers. Please check the csv file in Excel or another software to confirm that it is as expected. If the problem persists, please submit an issue and include the CSV file.
+
+### I am not sure what to put in **Choose Model Name** or I get an error that the model is not found
+Make sure you have the model transferred to the Raspberry Pi using WinSCP and that the model is saved on the Raspberry Pi in the folder saved_models with the full path `/home/pi/SFU_ML/RPi_Script/saved_models`. Make sure that the exact name of the model including the extension is added in the textbox of **Choose Model Name** (e.g. `MyLinearRegressionModel.pkl`)
+
+### I cannot ssh into the Raspberry Pi
+If you are trying to use `ssh pi@raspberrypi` but get the error:
+* "No such host is known" :: This means that the hostname is not recognized on the network and so it is very likely that there was a problem getting your raspberry pi to the network. Please make sure to follow section 1.1.2 carefully
+* Other errors may be caused by having another raspberry pi on the network with the same hostname that you are accidentally trying to connect to. In this case, please use the IP Address instead using `ssh pi@IP_ADDRESS'. You can also power off all other Raspberry Pis on the network and try again.
