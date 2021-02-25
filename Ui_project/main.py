@@ -13,7 +13,7 @@ from PySide2.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget, Q
                                 QLineEdit, QTextBrowser, QProgressBar, QAction, QDialog, QFileDialog, \
                                     QMessageBox, QVBoxLayout, QCheckBox, QDialogButtonBox, QScrollArea
 from PySide2.QtCore import QFile, QIODevice, Qt
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QFont, QIcon
 from ui_mainwindow import Ui_MainWindow
 from utils.logger import Logger
 from utils.executer import Executer, ExecutionResult
@@ -21,6 +21,7 @@ from utils import utils
 import pandas as pd
 import serial
 import time
+import argparse
 
 DISABLE_MODEL_TRASFER = True
 class MainWindow(QMainWindow):
@@ -436,21 +437,34 @@ class MainWindow(QMainWindow):
             self.port.close()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--ignore-platform', default=False, action='store_true')
+    parser.add_argument('--allow-resizing', default=False, action='store_true')
+    parser.add_argument('--larger-font', default=False, action='store_true')
+    args = parser.parse_args()
+
+    print(args.allow_resizing, args.ignore_platform)
     if not sys.platform.startswith('win'):
         print("Unsupported Platform. This application is tested on Windows Only")
-        exit(1)
-
+        if args.ignore_platform:
+            print("The application will continue to run but may crash or not function as intended")
+        else:
+            exit(1)
+    
     app = QApplication(sys.argv)
 
-    mainWindow = MainWindow()
-    mainWindow.setFixedSize(mainWindow.size())
-    mainWindow.show()
+    if args.larger_font:
+        font = app.font()
+        font.setPointSize(app.font().pointSize()*1.5)
+        font.setWeight(app.font().weight()*1.5)
+        app.setFont(font)
+        args.allow_resizing = True
 
-    #FOR TESTING PURPOSES
-    # mainWindow.useDefaultModelCheckbox.setChecked(False)
-    # if not DISABLE_MODEL_TRASFER:
-    #     mainWindow.modelLineEdit.setText('C:/Users/ramye/OneDrive - sfu.ca/My XPS/ML Course Dev/work/SFU_ML/LAB_1/dt_pickle_model.pkl')
-    # mainWindow.inputLineEdit.setText('C:/Users/ramye/OneDrive - sfu.ca/My XPS/ML Course Dev/work/SFU_ML/LAB_1/test_data.csv')
-    # mainWindow.outputFolderLineEdit.setText('C:/Users/ramye/OneDrive/Desktop/random11')
+    mainWindow = MainWindow()
+
+    if not args.allow_resizing:
+        mainWindow.setFixedSize(mainWindow.size())
+
+    mainWindow.show()
 
     sys.exit(app.exec_())
