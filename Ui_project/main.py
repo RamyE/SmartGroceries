@@ -443,7 +443,6 @@ if __name__ == "__main__":
     parser.add_argument('--larger-font', default=False, action='store_true')
     args = parser.parse_args()
 
-    print(args.allow_resizing, args.ignore_platform)
     if not sys.platform.startswith('win'):
         print("Unsupported Platform. This application is tested on Windows Only")
         if args.ignore_platform:
