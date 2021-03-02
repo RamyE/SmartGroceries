@@ -130,7 +130,7 @@ class Executer:
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
                         progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
                 elif labCode == "Lab2":
-                    executionResult = self._executeLab(inputs, outputFolder, outputHeader = "TBD",
+                    executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
                         progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
                 else:
                     raise ValueError("Lab Code should be one of the implemented lab codes for processing to work")

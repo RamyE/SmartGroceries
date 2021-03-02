@@ -162,7 +162,9 @@ class PiExecuter():
                     if self._currentLab == LabCode.LabTest:
                         ackPayload = self.processLabTest(payload)
                     elif self._currentLab == LabCode.Lab1:
-                        ackPayload = self.processLab1(payload)
+                        ackPayload = self.processLab1andLab2(payload)
+                    elif self._currentLab == LabCode.Lab2:
+                        ackPayload = self.processLab1andLab2(payload)
                     else:
                         raise Exception("The lab code provided was not a valid lab")
                 elif command == "PROCESSING_DONE":
@@ -182,8 +184,8 @@ class PiExecuter():
         print("The Acknowledgment Payload is:"+outputPayload)
         return outputPayload
 
-    def processLab1(self, payload):
-        # print("Went into process lab 1")
+    def processLab1andLab2(self, payload):
+        # print("Went into process lab 1 or Lab 2")
         input_list = [float(i) for i in payload.split(',')]
         y_pred = self._loadedModel.predict(np.array(input_list).reshape(1, -1)).astype('float32')
         outputPayload = ', '.join([str(i) for i in list(y_pred.flatten())])
