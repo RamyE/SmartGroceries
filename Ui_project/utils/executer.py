@@ -19,8 +19,6 @@ SERIAL_COMMAND_TIMEOUT = 1000 #in ms
 SAVE_MODEL_COMMAND_TIMEOUT = 240000 #in ms
 SERIAL_COMMAND_MAX_TRIALS = 3 #in number of trials
 
-# LOAD_MODEL is currently not used but is kept in case of implementing re-use of currently saved models in the future
-# SAVE_MODEL currently saves and loads the saved model on the 
 SERIAL_COMMANDS = ["RESET", "SELECT_LAB", "SAVE_MODEL", "LOAD_MODEL", "PROCESS", "PROCESSING_DONE", "GET_IP", "UPDATE_SCRIPT"]
 STARTING_BYTE = 0x01
 
@@ -77,9 +75,6 @@ class Executer:
         self.serialPort.flushInput()
         self.serialPort.flushOutput()
         startTime = time.time()
-
-        # if self.reset() == ExecutionResult.FAILED: #This is a workaround to make processing fail if RPi is not yet ready
-        #     return ExecutionResult.FAILED
 
         # progressBar = None
         if progressBar is not None:
