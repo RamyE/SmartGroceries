@@ -166,7 +166,7 @@ class PiExecuter():
                     elif self._currentLab == LabCode.Lab2:
                         ackPayload = self.processLab1andLab2(payload)
                     else:
-                        raise Exception("The lab code provided was not a valid lab")
+                        raise Exception("The lab selected is not a valid lab. This is likely a software implementation issue")
                 elif command == "PROCESSING_DONE":
                     self.execState = ExecState.Connected
 
