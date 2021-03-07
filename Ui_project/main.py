@@ -22,6 +22,10 @@ import pandas as pd
 import serial
 import time
 import argparse
+from subprocess import check_output, CalledProcessError
+import os
+
+APP_VERSION = "1.0.5"
 
 DISABLE_MODEL_TRASFER = True
 
@@ -35,7 +39,7 @@ class MainWindow(QMainWindow):
         self.setUpMainWindow()
 
     def setUpMainWindow(self):
-        self.setWindowTitle("Lab Tools 1.0 (2021 Edition) - Applications of ML in Mechatronics")
+        self.setWindowTitle(f"Lab Tools v{APP_VERSION.strip('.')[0]} - Applications of ML in Mechatronics")
         # set icon
         self.setUpIcon()
         
@@ -58,6 +62,10 @@ class MainWindow(QMainWindow):
         self.startStopButton = self.findChild(QPushButton, "startStopButton")
         self.useDefaultModelCheckbox = self.findChild(QCheckBox, "useDefaultModelCheckbox")
         self.chooseModelLabel = self.findChild(QLabel, "chooseModelLabel")
+
+        self.labNameComboBox = QComboBox()
+        self.labNameComboBox = self.findChild(QComboBox, "labNameComboBox")
+        self.labNameComboBox.currentIndexChanged.connect(self.handleLabNameComboboxCurrentIndexChanged)
 
         #disabling model transfer capability if needed
         self._modelRPiPath = False
@@ -97,9 +105,12 @@ class MainWindow(QMainWindow):
         self.actionGetRPiIP = QAction("Get RPi IP")
         self.utilitiesMenu.addAction(self.actionGetRPiIP)
         self.actionGetRPiIP.triggered.connect(self.handleActionGetRPiIPClicked)
-        self.actionUpdateRPiScript = QAction("Updare RPi Script")
+        self.actionUpdateRPiScript = QAction("Update RPi Script")
         self.utilitiesMenu.addAction(self.actionUpdateRPiScript)
         self.actionUpdateRPiScript.triggered.connect(self.handleActionUpdateRPiScript)
+        self.actionUpdateGUI = QAction("Update GUI Application")
+        self.utilitiesMenu.addAction(self.actionUpdateGUI)
+        self.actionUpdateGUI.triggered.connect(self.handleActionUpdateGUI)
 
         #create objects from the other classes
         self.logger = Logger(self.logTextBrowser, self.lastLogTextLabel)
@@ -114,6 +125,11 @@ class MainWindow(QMainWindow):
         self.setupSerial()
         self.refreshSerialPorts()
         
+        try:
+            currentGitHash = "at commit " + check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)))).decode('utf-8')[0:8]
+        except:
+            currentGitHash = ""
+        self.logger.log(f"App Version is {APP_VERSION} {currentGitHash}", type="INFO")
         self.logger.log("The application is ready!", type="INFO")
 
     def setUpIcon(self):
@@ -122,10 +138,6 @@ class MainWindow(QMainWindow):
 
 
     def setUpLabNames(self):
-        self.labNameComboBox = QComboBox()
-
-        self.labNameComboBox = self.findChild(QComboBox, "labNameComboBox")
-        self.labNameComboBox.currentIndexChanged.connect(self.handleLabNameComboboxCurrentIndexChanged)
         for code, name in utils.lab_names.items():
             self.labNameComboBox.addItem(code+": "+name)
         self.labNameComboBox.setCurrentIndex(1)
@@ -366,6 +378,16 @@ class MainWindow(QMainWindow):
         ipAddrMessage.setWindowIcon(self.appIcon)
         ipAddrMessage.exec_()
 
+    def handleActionUpdateGUI(self):
+        try:
+            result = check_output(['git','pull'], cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)))).decode('utf-8')
+            if "up to date" in result:
+                self.logger.log(f"You already have the latest version, Received: {result}")
+            else:
+                self.logger.log(f"GUI Application updated, please restart it! Received: {result}")
+        except Exception as e:
+            self.logger.log(f"Failed to update the GUI (git pull) because of exception: {e}", type="ERROR")
+            
     def _askForFieldsDialog(self, options, fields_type="inputs"):
         #Display a dialog to ask the user to choose what inputs/outputs they want
         dialog = QDialog(self)
