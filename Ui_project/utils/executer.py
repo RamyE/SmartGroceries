@@ -102,7 +102,10 @@ class Executer:
                         self.log("Failed to send the selected model", type="ERROR")
                         return ExecutionResult.FAILED
                 else:
-                    modelName = lab_default_models[labCode] if not model.startswith("RPI:") else model[4:]
+                    if not model:
+                        modelName = lab_default_models[labCode]
+                    elif model.startswith("RPI:"):
+                        modelName = model[4:]
                     if self._sendCommand("LOAD_MODEL", modelName, timeout=SERIAL_COMMAND_TIMEOUT*3) == FAILURE_CODE:
                         self.log("Failed to load the required model", type="ERROR")
                         return ExecutionResult.FAILED
