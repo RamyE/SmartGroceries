@@ -24,6 +24,7 @@ import time
 import argparse
 
 DISABLE_MODEL_TRASFER = True
+
 class MainWindow(QMainWindow):
 
     def __init__(self):
@@ -299,9 +300,9 @@ class MainWindow(QMainWindow):
         self.logger.clearLog()
 
     def handleUseDefaultModelCheckboxStateChanged(self):
-        if self._modelRPiPath:
+        if self.labNameComboBox.currentIndex() == 0:
             return
-        if not self.useDefaultModelCheckbox.checkState():
+        if self._modelRPiPath or not self.useDefaultModelCheckbox.checkState():
             self.modelLineEdit.setDisabled(0)
             self.browseModelButton.setDisabled(0)
         else:
@@ -318,7 +319,6 @@ class MainWindow(QMainWindow):
         if self.labNameComboBox.currentIndex() == 0:
             self.modelLineEdit.setDisabled(1)
             self.browseModelButton.setDisabled(1)
-            self.useDefaultModelCheckbox.setDisabled(1)
             self.modelLineEdit.setText("Model is not required")
         else:
             self.handleUseDefaultModelCheckboxStateChanged()
