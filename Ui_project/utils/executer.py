@@ -247,9 +247,11 @@ class Executer:
                         RMSE = mean_squared_error(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1], squared=False)
                         self.log(f"Regression R2 Score Calculated is {r2Score :.3f} and RMSE is {RMSE :.3f}")
                     elif labCode == "Lab2":
-                        from sklearn.metrics import accuracy_score
+                        from sklearn.metrics import accuracy_score, recall_score, f1_score
                         accuracyScore = accuracy_score(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1])
-                        self.log(f"Classification Accuracy Score Calculated is {accuracyScore*100 :.2f}%")
+                        recallScore = recall_score(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1])
+                        f1Score = f1_score(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1])
+                        self.log(f"Classification Metrics\n Accuracy: {accuracyScore*100 :.2f}%, Recall: {recallScore:.2f}, F1-Score: {f1Score:.2f}")
                 except Exception as e:
                     self.log(f"Failed to calculate accuracy metrics because of exception: {e}", type="ERROR")
 
