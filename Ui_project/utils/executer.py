@@ -69,7 +69,7 @@ class Executer:
         self._stopRequested  = False
 
 
-    def execute(self, labCode, inputDataFrame, outputFolder, inputFields=None, progressBar=None, model=None):
+    def execute(self, labCode, inputDataFrame, outputFolder, inputFields=None, outputField=None, progressBar=None, model=None):
         # self.logger.disableLogging()
 
         self.serialPort.flushInput()
@@ -115,6 +115,10 @@ class Executer:
                     inputs = inputDataFrame[inputFields]
                 else:
                     inputs = inputDataFrame
+                if outputField:
+                    trueOutput = inputDataFrame[outputField]
+                else:
+                    trueOutput = None
                 self.execState = ExecState.Processing
 
             if self.execState == ExecState.Processing:
@@ -123,10 +127,10 @@ class Executer:
                         progressBar=progressBar, plotter=None)
                 elif labCode == "Lab1":
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
-                        progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
+                        progressBar=progressBar, plotter=None, trueOutput=trueOutput, labCode=labCode)
                 elif labCode == "Lab2":
                     executionResult = self._executeLab(inputs, outputFolder, outputHeader = "Prediction",
-                        progressBar=progressBar, plotter=None, completeInputs=inputDataFrame)
+                        progressBar=progressBar, plotter=None, trueOutput=trueOutput, labCode=labCode)
                 else:
                     raise ValueError("Lab Code should be one of the implemented lab codes for processing to work")
                     return ExecutionResult.FAILED
@@ -186,17 +190,17 @@ class Executer:
             print(traceback.format_stack())
             return ExecutionResult.FAILED
 
-    def _executeLab(self, inputs, outputFolder, completeInputs= None, outputHeader= None, progressBar= None, plotter= None):
+    def _executeLab(self, inputs, outputFolder, trueOutput= None, labCode= None, outputHeader= None, progressBar= None, plotter= None):
         if progressBar is not None:
             progressBarIncrements = 100/len(inputs.index)
             currentProgressBarValue = progressBar.value()
         
         outputFilePath = os.path.join(outputFolder, datetime.now().strftime("%d-%m_%H-%M-%S"))
 
-        if completeInputs is None:
+        if trueOutput is None:
             outputDataFrame = copy.deepcopy(inputs)
         else:
-            outputDataFrame = copy.deepcopy(completeInputs)
+            outputDataFrame = copy.deepcopy(pd.concat([inputs, trueOutput], axis=1))
 
         with open(outputFilePath+"_OutputsOnly.csv", 'a') as outFile:
             headers = []
@@ -230,6 +234,22 @@ class Executer:
                     outputDataFrame.loc[i, header] = output
             outputDataFrame.to_csv(outputFilePath+"_Full.csv", index=False)
             self.log(f"Outputs Saved in {outputFilePath+'_OutputsOnly.csv'}\nComplete data saved in {outputFilePath+'_Full.csv'}")
+
+            # calculate accuracy
+            if trueOutput is not None and labCode:
+                try:
+                    if labCode == "Lab1":
+                        from sklearn.metrics import r2_score, mean_squared_error
+                        r2Score = r2_score(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1])
+                        RMSE = mean_squared_error(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1], squared=False)
+                        self.log(f"Regression R2 Score Calculated is {r2Score :.3f} and RMSE is {RMSE :.3f}")
+                    elif labCode == "Lab2":
+                        from sklearn.metrics import accuracy_score
+                        accuracyScore = accuracy_score(outputDataFrame.iloc[:, -2], outputDataFrame.iloc[:, -1])
+                        self.log(f"Classification Accuracy Score Calculated is {accuracyScore*100 :.2f}%")
+                except Exception as e:
+                    self.log(f"Failed to calculate accuracy metrics because of exception: {e}", type="ERROR")
+
             return SUCCESS_CODE
 
     def _sendCommand(self, command, payload, timeout=SERIAL_COMMAND_TIMEOUT, max_retry=SERIAL_COMMAND_MAX_TRIALS):

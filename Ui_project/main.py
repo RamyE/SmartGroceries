@@ -65,9 +65,6 @@ class MainWindow(QMainWindow):
             self.modelLineEdit.setEnabled(1)
             self.browseModelButton.hide()
             self.chooseModelLabel.setText(self.chooseModelLabel.text()+" Name")
-            # self.gridLayout = self.findChild(QGridLayout, "gridLayout")
-            # self.gridLayout.removeWidget(self.browseModelButton)
-            # self.gridLayout.removeWidget(self.useDefaultModelCheckbox)
             self._modelRPiPath = True
 
         self.startStopButton.clicked.connect(self.handleStartStopButtonClicked)
@@ -203,57 +200,17 @@ class MainWindow(QMainWindow):
             self.logger.log("CSV File Reading Failed, select a valid csv file", type="ERROR")
 
         possibleInputs = list(inputDataFrame.columns)
-
-        #Display a dialog to ask the user to choose what inputs they want
-        dialog = QDialog(self)
-
-        dialog.setWindowTitle("Select the Input Fields")
-        dialogButtons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        dialogButtons.button(QDialogButtonBox.Ok).setDisabled(0)
-        dialogButtons.accepted.connect(dialog.accept)
-        dialogButtons.rejected.connect(dialog.reject)
-        
-        mainLayout = QVBoxLayout(dialog)
-        scroll = QScrollArea(dialog)
-        scroll.setWidgetResizable(True)
-        layoutWidget = QWidget()
-        layout = QVBoxLayout(layoutWidget)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll.setWidget(layoutWidget)
-
-        chosenInputs=[]
-        checkboxes=[]
-
-        def handleCheckboxClicked():
-            dialogButtons.button(QDialogButtonBox.Ok).setDisabled(1)
-            for checkbox in checkboxes:
-                if checkbox.isChecked():
-                    dialogButtons.button(QDialogButtonBox.Ok).setDisabled(0)
-
-        for input in possibleInputs:
-            checkbox = QCheckBox(text=input)
-            checkbox.clicked.connect(handleCheckboxClicked)
-            checkbox.setChecked(True)
-            checkboxes.append(checkbox)
-            layout.addWidget(checkbox)
-
-        mainLayout.addWidget(QLabel(text="Please select the input fields from the following:"))
-        mainLayout.addWidget(scroll)
-        mainLayout.addWidget(dialogButtons)
-        dialog.setLayout(mainLayout)
-        # dialog.setFixedHeight(400)
-        if dialog.exec_() == QDialog.Accepted:
-            for checkbox in checkboxes:
-                if checkbox.isChecked():
-                    chosenInputs.append(checkbox.text())
-            self.logger.log("The chosen input fields are: "+ ', '.join(chosenInputs), type ="INFO")
-        else:
+        chosenInputs = self._askForFieldsDialog(possibleInputs, fields_type="inputs")
+        if not chosenInputs:
             return
+        chosenOutput = []
+        if len(chosenInputs) < len(possibleInputs):
+            chosenOutput = self._askForFieldsDialog(list(set(possibleInputs)-set(chosenInputs)), fields_type="output")
 
         self.startStopButton.setText("Stop Processing")
         self.b_processRunning = True
         executionResult = self.executer.execute(self.labNameComboBox.currentText().split(":")[0], inputDataFrame, \
-                                self.outputFolderLineEdit.text(), inputFields=chosenInputs, progressBar=self.progressBar, \
+                                self.outputFolderLineEdit.text(), inputFields=chosenInputs, outputField=chosenOutput, progressBar=self.progressBar, \
                                     model=modelPath if not self._modelRPiPath else "RPI:"+modelPath)
         if executionResult == ExecutionResult.COMPLETED:
             self._stopButtonClicked(finishedProcessing = True)
@@ -271,8 +228,6 @@ class MainWindow(QMainWindow):
         else:
             self.logger.log("", special="ProcessingStopped")
         self.b_processRunning = False
-        #TODO: Complete Implementing this
-
 
     def handleStartStopButtonClicked(self):
         if (self.b_processRunning):
@@ -357,14 +312,15 @@ class MainWindow(QMainWindow):
     def handleLabNameComboboxCurrentIndexChanged(self):
         if self._modelRPiPath:
             self.modelLineEdit.setText(utils.lab_default_models[self.labNameComboBox.currentText().split(":")[0]])
+        else:
+            self.modelLineEdit.setText("")
         # Disable the model options when the lab selected is Communication Test
         if self.labNameComboBox.currentIndex() == 0:
             self.modelLineEdit.setDisabled(1)
             self.browseModelButton.setDisabled(1)
             self.modelLineEdit.setText("Model is not required")
         else:
-            self.modelLineEdit.setDisabled(0)
-            self.browseModelButton.setDisabled(0)            
+            self.handleUseDefaultModelCheckboxStateChanged()
 
     def handleActionGetRPiIPClicked(self):
         self.logger.log("Attempting to Get Raspberry Pi IP Address", type="INFO")
@@ -408,6 +364,63 @@ class MainWindow(QMainWindow):
         ipAddrMessage.setTextFormat(Qt.RichText)
         ipAddrMessage.setWindowIcon(self.appIcon)
         ipAddrMessage.exec_()
+
+    def _askForFieldsDialog(self, options, fields_type="inputs"):
+        #Display a dialog to ask the user to choose what inputs/outputs they want
+        dialog = QDialog(self)
+
+        dialog.setWindowTitle(f"Select the model {fields_type.upper()}")
+        dialogButtons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        dialogButtons.button(QDialogButtonBox.Ok).setDisabled(0)
+        dialogButtons.accepted.connect(dialog.accept)
+        dialogButtons.rejected.connect(dialog.reject)
+        
+        mainLayout = QVBoxLayout(dialog)
+        scroll = QScrollArea(dialog)
+        scroll.setWidgetResizable(True)
+        layoutWidget = QWidget()
+        layout = QVBoxLayout(layoutWidget)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setWidget(layoutWidget)
+
+        chosenFields=[]
+        checkboxes=[]
+
+        def handleCheckboxClicked():
+            dialogButtons.button(QDialogButtonBox.Ok).setDisabled(1)
+            count = 0
+            for checkbox in checkboxes:
+                if checkbox.isChecked():
+                    count += 1
+            if fields_type.lower() == "output":
+                setDisabled = True if count > 1 else False
+            else:
+                setDisabled = True if count == 0 else False
+            dialogButtons.button(QDialogButtonBox.Ok).setDisabled(setDisabled)
+
+        for input in options:
+            checkbox = QCheckBox(text=input)
+            checkbox.clicked.connect(handleCheckboxClicked)
+            checkbox.setChecked(True)
+            checkboxes.append(checkbox)
+            layout.addWidget(checkbox)
+
+        mainLayout.addWidget(QLabel(text=f"Please select the {fields_type.lower()} from the following:"))
+        mainLayout.addWidget(scroll)
+        mainLayout.addWidget(dialogButtons)
+        dialog.setLayout(mainLayout)
+
+        handleCheckboxClicked()
+
+        if dialog.exec_() == QDialog.Accepted:
+            for checkbox in checkboxes:
+                if checkbox.isChecked():
+                    chosenFields.append(checkbox.text())
+            self.logger.log(f"The chosen {fields_type.lower()} are: "+ ', '.join(chosenFields), type ="INFO")
+            return chosenFields
+        else:
+            return []
+
 
     @property
     def b_processRunning(self):
