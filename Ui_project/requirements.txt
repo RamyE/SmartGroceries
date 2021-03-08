@@ -4,3 +4,4 @@ crccheck==1.0
 numpy==1.19.1
 pyserial==3.5
 PySide2==5.15.2
+scikit_learn
