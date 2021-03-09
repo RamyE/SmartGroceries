@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     #if this is running on the target RPi
     if sys.platform.startswith('linux'):
-        blockPrint()
+        # blockPrint()
         portName = "/dev/ttyGS0"
     else:
         portName = "COM2"
