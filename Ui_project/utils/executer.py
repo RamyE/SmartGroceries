@@ -5,8 +5,9 @@ from serial.serialutil import SerialTimeoutException
 from utils.utils import lab_names, lab_default_models
 from utils.plotter import Plotter
 from crccheck.crc import Crc16
-from PySide2.QtCore import QTimer, QCoreApplication
-from PySide2.QtWidgets import QDialog
+from PySide2.QtCore import QMargins, QTimer, QCoreApplication
+from PySide2.QtGui import QPixmap, Qt, QIcon, QPalette, QColor
+from PySide2.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QListWidget, QMessageBox, QPushButton, QSpacerItem, QTextBrowser, QVBoxLayout, QSizePolicy, QScrollArea, QWidget
 from datetime import datetime
 import os
 import time
@@ -14,12 +15,16 @@ from concurrent.futures import ThreadPoolExecutor
 import traceback
 import zlib
 import copy
+import random
+import calendar
+from functools import partial
 
-SERIAL_COMMAND_TIMEOUT = 1000 #in ms
+SERIAL_COMMAND_TIMEOUT = 4000 #in ms
 SAVE_MODEL_COMMAND_TIMEOUT = 240000 #in ms
 SERIAL_COMMAND_MAX_TRIALS = 3 #in number of trials
 
-SERIAL_COMMANDS = ["RESET", "SELECT_LAB", "SAVE_MODEL", "LOAD_MODEL", "PROCESS", "PROCESSING_DONE", "GET_IP", "UPDATE_SCRIPT"]
+SERIAL_COMMANDS = ["RESET", "SELECT_LAB", "SAVE_MODEL", "LOAD_MODEL", "PROCESS", "PROCESSING_DONE", "GET_IP", "UPDATE_SCRIPT",
+                    "PROCESS_PROJECT_GROUP_2"]
 STARTING_BYTE = 0x01
 
 FAILURE_CODE = -1
@@ -172,6 +177,221 @@ class Executer:
             return ExecutionResult.FAILED
         else:
             return result
+    def executeProject(self, mainWindow, project_name):
+        if project_name == "SmartGroceries":            
+            self.referenceItemsLabels = {}
+            self.itemInHand = None
+            self.itemsInCart = list()
+            self.currentOrderReferenceItems = list()
+            self.currentOrderUserId = 0
+            self.recommendedItemsButtons = list()
+            self.previousRecommendations = list()
+            self.numberOfGoodRecommendations = 0
+
+            products = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", "products.csv"))
+            aisles = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", "aisles.csv"))
+            test_data = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", "test_set.csv"))
+            # print(products)
+            # print(aisles)
+            # print(test_data)
+            aisle_name_to_id = {k:v for k, v in zip(aisles.aisle, aisles.aisle_id)}
+            product_name_to_id =  {k:v for k, v in zip(products.product_name, products.product_id)}
+            product_id_to_name =  {k:v for k, v in zip(products.product_id, products.product_name)}
+
+            def changeCurrentitem(itemName):
+                if itemName == "":
+                    self.itemInHand = None
+                    currentItemLabel.setText(f"<b>Select an item from the list or from the recommendations</b>s")
+                    addToCartButton.setEnabled(False)
+                else:
+                    self.itemInHand = product_name_to_id[itemName]
+                    currentItemLabel.setText(f"Add <b>{itemName}</b> to Cart")
+                    addToCartButton.setEnabled(True)
+                    addToCartButton.setFocus()
+
+            def handleNewOrderButtonClicked():
+                grouped = test_data.groupby('order_id')
+                while True:
+                    order_number = random.sample(grouped.indices.keys(), 1)[0]
+                    currentOrder = grouped.get_group(order_number)
+                    self.currentOrderReferenceItems = currentOrder.product_id.tolist()
+                    self.currentOrderUserId = currentOrder.user_id.iloc[0]
+                    if len(self.currentOrderReferenceItems) > 1:
+                        break
+                print(self.currentOrderReferenceItems)
+                orderInfo = f"<b>Order ID: </b>{currentOrder.order_id.iloc[0]}<br>"
+                orderInfo += f"<b>User ID: </b>{self.currentOrderUserId} | <b>DOW: </b>{calendar.day_name[currentOrder.order_dow.iloc[0]]} | <b>Hour of Day: </b>{currentOrder.order_hour_of_day.iloc[0]}  | <b>Number of Items: </b>{len(self.currentOrderReferenceItems)}"
+                orderInfo += "<br><b>Items in the Reference Order:</b>"
+
+                for widget in self.referenceItemsLabels.values():
+                    item = referenceItemsLayout.itemAt(0)
+                    widget.setVisible(False)
+                    referenceItemsLayout.removeItem(item)
+                    del item
+                self.referenceItemsLabels.clear()
+                currentCartItems.clear()
+                self.itemsInCart.clear()
+                self.previousRecommendations.clear()
+                self.numberOfGoodRecommendations = 0
+
+                updateCurrentRecommendations(list())
+                for product in self.currentOrderReferenceItems:
+                    refItemName = product_id_to_name[product]
+                    refItemLabel = QPushButton(refItemName)
+                    refItemLabel.setContentsMargins(QMargins(0,0,0,0))
+                    refItemLabel.setStyleSheet("Text-align:left")
+                    refItemLabel.setFlat(False)
+                    refItemLabel.clicked.connect(partial(changeCurrentitem, refItemName))
+                    self.referenceItemsLabels[product]= refItemLabel
+                    orderInfoLabel.setText(f"<b>Order Information</b><br>{orderInfo}")
+
+                for referenceItemLabel in self.referenceItemsLabels.values():
+                    referenceItemsLayout.addWidget(referenceItemLabel)
+
+                runAutoButton.setFocus()
+
+            def handleRunAutomatically():
+                for referenceItemLabel in self.referenceItemsLabels.values():
+                    referenceItemLabel.click()
+                    addToCartButton.click()
+
+
+            def updateCurrentRecommendations(recommendations):
+                for widget in self.recommendedItemsButtons:
+                    item = recommendationsLayout.itemAt(0)
+                    widget.setVisible(False)
+                    recommendationsLayout.removeItem(item)
+                    del item
+                self.recommendedItemsButtons.clear()
+                for product in recommendations:
+                    recItemName = product_id_to_name[product]
+                    recItemButton = QPushButton(recItemName)
+                    recItemButton.setContentsMargins(QMargins(0,0,0,0))
+                    recItemButton.setStyleSheet("Text-align:left;")
+                    if product not in self.currentOrderReferenceItems:
+                        recItemButton.setFlat(True)
+                    recItemButton.clicked.connect(partial(changeCurrentitem, recItemName))
+                    self.recommendedItemsButtons.append(recItemButton)
+                for recItemButton in self.recommendedItemsButtons:
+                    recommendationsLayout.addWidget(recItemButton)
+                if len(recommendations) > 0:
+                    currentRecommendationsLabel.setVisible(True)
+                else:
+                    currentRecommendationsLabel.setVisible(False)
+                self.previousRecommendations += recommendations
+
+            def handleAddToCartButtonClicked():
+                print(self.currentOrderReferenceItems)
+                print(self.itemInHand)
+                if self.itemInHand not in self.currentOrderReferenceItems:
+                    QMessageBox(QMessageBox.Critical, "Error adding item to cart", "You can only add items that exists in the reference order").exec_()
+                    return
+                elif self.itemInHand in self.itemsInCart:
+                    QMessageBox(QMessageBox.Critical, "Error adding item to cart", "This item is already in the cart").exec_()
+                    return
+                self.referenceItemsLabels[self.itemInHand].setFlat(True)
+                self.itemsInCart.append(self.itemInHand)
+                currentCartItems.addItem(product_id_to_name[self.itemInHand])
+                if self.itemInHand in self.previousRecommendations:
+                    self.numberOfGoodRecommendations+=1
+                    self.referenceItemsLabels[self.itemInHand].setStyleSheet("Text-align:left; background-color:green;")
+                    self.referenceItemsLabels[self.itemInHand].setFlat(False)
+
+                #update recommendations
+                result = self._sendCommand("PROCESS_PROJECT_GROUP_2", ";".join([str(self.currentOrderUserId), ",".join([str(x) for x in self.itemsInCart]), ",".join([str(x) for x in set(self.previousRecommendations)])]))
+                if result == FAILURE_CODE:
+                    self.log("Processing Failed, error getting recommendations from the RPi")
+                    return
+                else:
+                    try:
+                        recommendations = [int(id) for id in result.split(',')]
+                    except:
+                        recommendations = []
+
+                updateCurrentRecommendations(recommendations)
+                if len(self.itemsInCart) == len(self.currentOrderReferenceItems):
+                    completionMessage = QMessageBox(QMessageBox.Information, "Order Completed", f"Order Completed with {self.numberOfGoodRecommendations} Good Recommendation(s)\nPress New Order to start a new order")
+                    if self.numberOfGoodRecommendations == 0:
+                        completionMessage.setIconPixmap(QPixmap('images/this_is_fine.jpg'))
+                    completionMessage.setWindowIcon(appIcon)
+                    completionMessage.exec_()
+                    newOrderButton.setFocus()
+
+            def aisleChanged():
+                aisle_number = aisle_name_to_id[selectAisleCombobox.currentText()]
+                products_in_aisle = products[products.aisle_id == aisle_number].product_name.tolist()
+                selectproductCombobox.clear()
+                selectproductCombobox.addItem("")
+                selectproductCombobox.addItems(products_in_aisle)
+            def itemChanged():
+                current_item = selectproductCombobox.currentText()
+                changeCurrentitem(current_item)
+            
+            dialog = QDialog(mainWindow)
+            appIcon = QIcon("images/this_is_fine.jpg")
+            dialog.setWindowIcon(appIcon)
+            dialog.setMinimumWidth(600)
+            dialog.setWindowTitle("Smart Groceries Demo")
+            layout = QVBoxLayout()
+            newOrderButton = QPushButton("New Order")
+            orderInfoLabel = QLabel()
+            orderInfoLabel.setTextFormat(Qt.RichText)
+            chooseItemLayout = QHBoxLayout()
+            verticalSpacer = QSpacerItem(20, 20)
+            currentCartItems = QListWidget()
+
+            layoutWidget = QWidget()
+            referenceItemsLayout = QVBoxLayout(layoutWidget); referenceItemsLayout.setSpacing(0); referenceItemsLayout.setMargin(0)
+            scroll = QScrollArea(dialog)
+            scroll.setWidgetResizable(True)
+            scroll.setMinimumHeight(150)
+            scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            scroll.setWidget(layoutWidget)
+
+            selectAisleLabel = QLabel("Aisle: ")
+            selectProductLabel = QLabel("Product: ")
+            selectAisleCombobox = QComboBox()
+            selectproductCombobox = QComboBox()
+            chooseItemLayout.addWidget(selectAisleLabel, 0,  Qt.AlignLeft)
+            chooseItemLayout.addWidget(selectAisleCombobox, 0,  Qt.AlignLeft)
+            chooseItemLayout.addWidget(selectProductLabel, 0,  Qt.AlignLeft)
+            chooseItemLayout.addWidget(selectproductCombobox, 0,  Qt.AlignLeft)
+
+            addToCartButton = QPushButton("Add to Cart")
+            currentItemLabel = QLabel()
+            currentItemLabel.setTextFormat(Qt.RichText)
+            if self.itemInHand is None:
+                currentItemLabel.setText(f"<b>Select an item from the list or from the recommendations</b>")
+            addToCartButton.setDisabled(True)
+            currentItemLayout = QHBoxLayout(); currentItemLayout.addWidget(currentItemLabel); currentItemLayout.addWidget(addToCartButton); 
+            recommendationsLayout = QVBoxLayout();  recommendationsLayout.setSpacing(0); recommendationsLayout.setMargin(0)
+
+            newOrderButton.clicked.connect(handleNewOrderButtonClicked)
+            addToCartButton.clicked.connect(handleAddToCartButtonClicked)
+            selectproductCombobox.currentIndexChanged.connect(itemChanged)
+            selectAisleCombobox.currentIndexChanged.connect(aisleChanged)
+            selectAisleCombobox.addItems(aisles.aisle.tolist())
+
+            layout.addWidget(newOrderButton)
+            layout.addSpacerItem(verticalSpacer)
+            layout.addWidget(orderInfoLabel)
+            layout.addWidget(scroll)
+            layout.addSpacerItem(verticalSpacer)
+            layout.addLayout(chooseItemLayout)
+            layout.addSpacerItem(verticalSpacer)
+            itemsInTheCartLabel = QLabel("<b>Items in the Cart<b>"); layout.addWidget(itemsInTheCartLabel); itemsInTheCartLabel.setTextFormat(Qt.RichText)
+            layout.addWidget(currentCartItems)
+            layout.addSpacerItem(verticalSpacer)
+            currentRecommendationsLabel = QLabel("<b>Current Recommendations<b>"); layout.addWidget(currentRecommendationsLabel); currentRecommendationsLabel.setTextFormat(Qt.RichText); currentRecommendationsLabel.setVisible(False)
+            layout.addLayout(recommendationsLayout)
+            layout.addSpacerItem(verticalSpacer)
+            layout.addLayout(currentItemLayout)
+            runAutoButton = QPushButton("Run and Watch. TRUST ME, IT IS FUN!"); layout.addWidget(runAutoButton); runAutoButton.clicked.connect(handleRunAutomatically)
+            dialog.setLayout(layout)
+            handleNewOrderButtonClicked()
+            dialog.exec_()
+            return
+
 
     def reset(self):
         try:

@@ -7,9 +7,22 @@ import sklearn
 import numpy as np
 import zlib
 from subprocess import check_output, CalledProcessError
-
+import pandas as pd
+import ast
+import random
+import surprise
 
 STARTING_BYTE = 0x01
+
+# rules_df = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", 'rules_df.csv'))
+# rules_df.Antecedent = rules_df.Antecedent.apply(lambda x: ast.literal_eval(x))
+# rules_df.Consequents = rules_df.Consequents.apply(lambda x: ast.literal_eval(x))
+pickls_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "pickles")
+rules_df_categorized = pickle.load(open(os.path.join(pickls_path, 'rules_df_categorized.pkl'), 'rb'))
+product_to_category = pickle.load(open(os.path.join(pickls_path, 'product_to_category.pkl'), 'rb'))
+collab_filtering_predictions = pickle.load(open(os.path.join(pickls_path, 'collab_filtering_predictions.pkl'), 'rb'))
+users_categorized_top_items = pickle.load(open(os.path.join(pickls_path, 'users_categorized_top_items.pkl'), 'rb'))
+top_100_items = [24852, 13176, 21137, 21903, 47209, 47766, 47626, 16797, 26209, 27845, 27966, 22935, 24964, 45007, 39275, 49683, 28204, 5876, 8277, 40706, 4920, 30391, 45066, 42265, 49235, 44632, 19057, 4605, 37646, 21616, 17794, 27104, 30489, 31717, 27086, 44359, 28985, 46979, 8518, 41950, 26604, 5077, 34126, 22035, 39877, 35951, 43352, 10749, 19660, 9076, 21938, 43961, 24184, 34969, 46667, 48679, 25890, 31506, 12341, 39928, 24838, 5450, 22825, 5785, 35221, 28842, 33731, 27521, 44142, 33198, 8174, 20114, 8424, 27344, 11520, 29487, 18465, 28199, 15290, 46906, 9839, 27156, 3957, 43122, 23909, 34358, 4799, 9387, 16759, 196, 42736, 38689, 4210, 41787, 41220, 47144, 7781, 33000, 20995, 21709]
 
 class SerialState(enum.Enum):
     WaitingToStart = 0
@@ -113,7 +126,9 @@ class PiExecuter():
                 ackPayload = check_output(['git','pull'], cwd='/home/pi/SFU_ML').decode('utf-8')
             except CalledProcessError as e:
                 ackPayload = "FAILED: " + e.output()
-
+        elif command == "PROCESS_PROJECT_GROUP_2":
+            ackPayload = self.processProjectGroup2(payload)
+        
         elif self.execState == ExecState.NotConnected:
             raise Exception("Wrong Exec State reached somehow: {}".format(self.execState))
 
@@ -194,6 +209,95 @@ class PiExecuter():
             raise Exception("Problem with getting a prediction for the input data, \
 please check the provided model and restart both the application and Raspberry Pi")
         return outputPayload
+
+    def processProjectGroup2(self, payload):
+        user_id = int(payload.split(";")[0])
+        input_items = [ int(id.strip()) for id in payload.split(";")[1].split(",")]
+        try:
+            try_to_execlude = [ int(id.strip()) for id in payload.split(";")[2].split(",")]
+        except:
+            try_to_execlude = []
+
+        def association_rules_algo(current_items, k=5, rules_df=None, no_popular_items=False):
+            # print(current_items)
+            if rules_df is None:
+                raise RuntimeError("Rules Data Frame needs to be provided (acts as a trained model)")
+            possible_predictions_df = rules_df[rules_df['Antecedent'].map(lambda x: all(id in current_items for id in x))]
+            possible_predictions_df = possible_predictions_df.sort_values('Confidence', ascending=False)
+            possible_predictions = []
+            for row in possible_predictions_df['Consequents']:
+                [possible_predictions.append(x) for x in row if not (x in possible_predictions or x in current_items)]
+            print(possible_predictions)
+            if no_popular_items:
+                possible_predictions = [x for x in possible_predictions if (x not in top_100_items)]
+            print(possible_predictions)
+            filtered_predictions = possible_predictions.copy()
+            possible_predictions.reverse()
+            for item in possible_predictions:
+                if (item in try_to_execlude) and len(filtered_predictions) > k:
+                    filtered_predictions.remove(item)
+            print(filtered_predictions)
+            return filtered_predictions[:min(k, len(filtered_predictions))]
+
+        def association_rules_categories_algo(current_items, k=5, rules_df=None, user_id = None, no_popular_items=False):
+            if rules_df is None:
+                raise RuntimeError("Rules Data Frame needs to be provided (acts as a trained model)")
+            if user_id is None:
+                raise RuntimeError("User ID needs to be provided for this algorithm to work")
+            current_categories = set([product_to_category[id] for id in current_items if id in product_to_category.keys()])
+            possible_predictions_df = rules_df[rules_df['Antecedent'].map(lambda x: all(category in current_categories for category in x))]
+            possible_predictions_df = possible_predictions_df.sort_values('Confidence', ascending=False)
+            possible_predictions = []
+            for row in possible_predictions_df['Consequents']:
+                [possible_predictions.append(x) for x in row if not (x in possible_predictions or x in current_categories)]
+            final_predictions = []
+            for category in possible_predictions:
+                if category in users_categorized_top_items[user_id].keys():
+                    for item, count in users_categorized_top_items[user_id][category]:
+                        if not no_popular_items or item not in top_100_items:
+                            # if item not in try_to_execlude :
+                            final_predictions.append(item)
+                            break
+                    # if len(final_predictions) == k:
+                    #     break
+            filtered_predictions = final_predictions.copy()
+            final_predictions.reverse()
+            for item in final_predictions:
+                if (item in try_to_execlude) and len(filtered_predictions) > k:
+                    filtered_predictions.remove(item)
+            return filtered_predictions[:min(k, len(filtered_predictions))]
+
+        def get_predictions_for_user(predictions, uid):
+            top_items = []
+            for uid, iid, _, est, _ in predictions:
+                if uid == user_id:
+                    top_items.append((iid, est))
+            top_items.sort(key=lambda x: x[1], reverse=True)
+            return top_items
+
+        def collab_filtering_algo(cart_current_items, cf_predictions_tuple=None, k=5, user_id=None):
+            if user_id is None:
+                raise RuntimeError("User ID needs to be provided for this algorithm to work")
+            if cf_predictions_tuple is None:
+                raise RuntimeError("Provide the saved predictions in the Surprise Predictions format")
+            possible_recommendations = [iid for (iid, _) in get_predictions_for_user(cf_predictions_tuple, user_id) if iid not in (cart_current_items)] #try_to_execlude
+            return possible_recommendations[:min(k, len(possible_recommendations))]
+
+        def hybrid_algo(cart_current_items, k=5, cf_predictions_tuple=None, user_id=None, rules_df=None, no_popular_items=True):
+            if user_id is None or cf_predictions_tuple is None or rules_df is None:
+                raise RuntimeError("Please provide all needed keyword arguments user_id, rules_df, and cf_predictions_tuple")
+            s = random.randrange(1, k)
+            assoc_rules_predictions = association_rules_categories_algo(cart_current_items, k=k-s, rules_df=rules_df, user_id=user_id, no_popular_items=True)
+            m = k-len(assoc_rules_predictions)
+            collab_filtering_predictions = collab_filtering_algo(cart_current_items, cf_predictions_tuple=cf_predictions_tuple, k=m,user_id=user_id)
+            print("assoc", len(assoc_rules_predictions), "collab", len(collab_filtering_predictions))
+            return assoc_rules_predictions+collab_filtering_predictions
+    
+        # recommendations = hybrid_algo(input_items, user_id=user_id, k=5, rules_df=rules_df_categorized, cf_predictions_tuple=collab_filtering_predictions)
+        recommendations = association_rules_categories_algo(input_items, user_id=user_id, k=5, rules_df=rules_df_categorized, no_popular_items=True)
+        print(recommendations)
+
+        return ",".join([str(x) for x in recommendations])
 
     def sendSerialAck(self, result=None):
         outBuffer = bytearray()

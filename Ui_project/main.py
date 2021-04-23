@@ -9,7 +9,7 @@
 # os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
 
 import sys
-from PySide2.QtWidgets import QApplication, QGridLayout, QMainWindow, QWidget, QComboBox, QPushButton, QLabel,\
+from PySide2.QtWidgets import QApplication, QBoxLayout, QGridLayout, QMainWindow, QWidget, QComboBox, QPushButton, QLabel,\
                                 QLineEdit, QTextBrowser, QProgressBar, QAction, QDialog, QFileDialog, \
                                     QMessageBox, QVBoxLayout, QCheckBox, QDialogButtonBox, QScrollArea
 from PySide2.QtCore import QFile, QIODevice, Qt
@@ -111,6 +111,12 @@ class MainWindow(QMainWindow):
         self.actionUpdateGUI = QAction("Update GUI Application")
         self.utilitiesMenu.addAction(self.actionUpdateGUI)
         self.actionUpdateGUI.triggered.connect(self.handleActionUpdateGUI)
+
+        #add a Menu for the Projects
+        self.utilitiesMenu = self.menuBar().addMenu("Projects")
+        self.actionGroup2Project = QAction("Smart Groceries Project")
+        self.utilitiesMenu.addAction(self.actionGroup2Project)
+        self.actionGroup2Project.triggered.connect(self.handleActionGroup2Project)
 
         #create objects from the other classes
         self.logger = Logger(self.logTextBrowser, self.lastLogTextLabel)
@@ -388,6 +394,14 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.log(f"Failed to update the GUI (git pull) because of exception: {e}", type="ERROR")
             
+    def handleActionGroup2Project(self):
+        self.logger.log("Attempting to start the Project Demo", type="INFO")
+        if not self.b_serialConnected:
+            self.logger.log("Serial is not connected, Please connect serial first", type="ERROR")
+            return
+        self.executer = Executer(serialObj=self.port, loggerObj=self.logger)
+        self.executer.executeProject(self, "SmartGroceries")
+
     def _askForFieldsDialog(self, options, fields_type="inputs"):
         #Display a dialog to ask the user to choose what inputs/outputs they want
         dialog = QDialog(self)
@@ -487,6 +501,7 @@ if __name__ == "__main__":
             exit(1)
     
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
 
     if args.larger_font:
         font = app.font()
@@ -501,5 +516,11 @@ if __name__ == "__main__":
         mainWindow.setFixedSize(mainWindow.size())
 
     mainWindow.show()
+
+    # Project Stuff
+    mainWindow.refreshSerialPortsButton.click()
+    mainWindow.serialPortComboBox.setCurrentIndex(0)
+    mainWindow.connectDisconnectSerialButton.click()
+    mainWindow.handleActionGroup2Project()
 
     sys.exit(app.exec_())
