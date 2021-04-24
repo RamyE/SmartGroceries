@@ -187,6 +187,7 @@ class Executer:
             self.recommendedItemsButtons = list()
             self.previousRecommendations = list()
             self.numberOfGoodRecommendations = 0
+            self.supportedUsers =  range(1, 1001)
 
             products = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", "products.csv"))
             aisles = pd.read_csv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "projects", "SmartGroceries", "data", "aisles.csv"))
@@ -216,7 +217,7 @@ class Executer:
                     currentOrder = grouped.get_group(order_number)
                     self.currentOrderReferenceItems = currentOrder.product_id.tolist()
                     self.currentOrderUserId = currentOrder.user_id.iloc[0]
-                    if len(self.currentOrderReferenceItems) > 1:
+                    if len(self.currentOrderReferenceItems) > 1 and self.currentOrderUserId in self.supportedUsers:
                         break
                 print(self.currentOrderReferenceItems)
                 orderInfo = f"<b>Order ID: </b>{currentOrder.order_id.iloc[0]}<br>"
