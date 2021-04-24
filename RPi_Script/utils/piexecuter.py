@@ -23,7 +23,7 @@ print("rules_df_categorized loaded")
 product_to_category = pickle.load(open(os.path.join(pickls_path, 'product_to_category.pkl'), 'rb'))
 # collab_filtering_predictions = pickle.load(open(os.path.join(pickls_path, 'collab_filtering_predictions.pkl'), 'rb'))
 print("product_to_category loaded")
-users_categorized_top_items = pickle.load(open(os.path.join(pickls_path, 'users_categorized_top_items.pkl'), 'rb'))
+users_categorized_top_items = pickle.load(open(os.path.join(pickls_path, 'reduced_users_categorized_top_items.pkl'), 'rb'))
 print("reduced_users_categorized_top_items loaded")
 top_100_items = [24852, 13176, 21137, 21903, 47209, 47766, 47626, 16797, 26209, 27845, 27966, 22935, 24964, 45007, 39275, 49683, 28204, 5876, 8277, 40706, 4920, 30391, 45066, 42265, 49235, 44632, 19057, 4605, 37646, 21616, 17794, 27104, 30489, 31717, 27086, 44359, 28985, 46979, 8518, 41950, 26604, 5077, 34126, 22035, 39877, 35951, 43352, 10749, 19660, 9076, 21938, 43961, 24184, 34969, 46667, 48679, 25890, 31506, 12341, 39928, 24838, 5450, 22825, 5785, 35221, 28842, 33731, 27521, 44142, 33198, 8174, 20114, 8424, 27344, 11520, 29487, 18465, 28199, 15290, 46906, 9839, 27156, 3957, 43122, 23909, 34358, 4799, 9387, 16759, 196, 42736, 38689, 4210, 41787, 41220, 47144, 7781, 33000, 20995, 21709]
 
